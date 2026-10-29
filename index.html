@@ -1,0 +1,1580 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>循经台 · 卷一 · 手太阴肺经 —— 中医穴位学习小游戏</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;900&display=swap" rel="stylesheet">
+<style>
+/* ============ 基础与配色 ============ */
+:root{
+  --cream:#f5f0e0;
+  --green:#2d5a3d;
+  --green-dark:#1e3d29;
+  --red:#c33;
+  --ink:#3a3226;
+  --card:#fffdf3;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;width:100%;overflow-x:hidden}
+body{
+  font-family:'Noto Serif SC',serif;
+  font-size:clamp(15px,4vw,18px);
+  min-height:100svh;
+  background:var(--cream);
+  background-image:radial-gradient(rgba(45,90,61,.05) 1px, transparent 1px);
+  background-size:9px 9px;
+  color:var(--ink);
+  overflow-x:hidden;
+}
+.hidden{display:none !important}
+
+#app{
+  width:100%;max-width:720px;margin:0 auto;padding:14px 16px 130px;
+  display:flex;flex-direction:column;align-items:center;gap:16px;
+}
+#hud,#stage{width:100%;min-width:0}
+
+/* ============ 顶部 HUD ============ */
+#hud{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  padding:10px 6px 14px;flex-wrap:wrap;
+}
+.hud-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0}
+#chapterSeal{
+  background:var(--red);color:#fff;font-weight:900;font-size:14px;
+  padding:6px 8px;border-radius:4px;letter-spacing:2px;white-space:nowrap;
+  box-shadow:2px 2px 0 rgba(0,0,0,.15);transform:rotate(-3deg);display:inline-block;
+}
+#levelTitle{font-size:clamp(15px,4.5vw,20px);font-weight:900;color:var(--green);letter-spacing:3px;min-width:0}
+
+#phaseSeals{display:flex;align-items:center;gap:6px}
+.seal-step{
+  width:36px;height:36px;display:flex;align-items:center;justify-content:center;
+  border:2px solid var(--green);color:var(--green);border-radius:6px;
+  font-weight:900;font-size:17px;background:transparent;transition:.25s;
+}
+.seal-step.active{background:var(--red);border-color:var(--red);color:#fff;transform:rotate(-6deg) scale(1.1);box-shadow:2px 2px 0 rgba(0,0,0,.18)}
+.seal-step.done{background:var(--green);color:var(--cream)}
+.seal-arrow{color:var(--green);opacity:.6;font-size:13px}
+
+/* ============ 舞台 ============ */
+#stage{
+  position:relative;height:540px;border:3px solid var(--green);border-radius:10px;
+  overflow:hidden;background:#e9e4cf;
+  box-shadow:0 0 0 3px var(--cream),0 0 0 5px var(--green),0 10px 26px rgba(45,90,61,.22);
+}
+#sceneBg{position:absolute;inset:0;width:100%;height:100%}
+#sceneContent{position:absolute;inset:0}
+#stageFlash{position:absolute;inset:0;background:rgba(204,51,51,.32);opacity:0;pointer-events:none;z-index:36}
+#stageFlash.go{animation:flashRed .6s ease}
+@keyframes flashRed{0%{opacity:0}20%{opacity:1}100%{opacity:0}}
+
+.fade-in{animation:fadeIn .45s ease both}
+/* 注意：fadeIn 不能用 transform，否则带 transform 的阶段容器会成为
+   内部绝对定位元素（演员/按钮）的包含块，导致它们定位错乱 */
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+/* ============ 卡片与按钮 ============ */
+.card{
+  background:var(--card);border:2px solid var(--green);border-radius:8px;
+  padding:16px 20px;box-shadow:0 4px 14px rgba(45,90,61,.16);position:relative;
+}
+.card::before,.card::after{content:'';position:absolute;width:10px;height:10px;border:2px solid var(--red)}
+.card::before{top:-2px;left:-2px;border-right:none;border-bottom:none}
+.card::after{bottom:-2px;right:-2px;border-left:none;border-top:none}
+
+.btn{
+  font-family:inherit;font-size:16px;font-weight:600;letter-spacing:2px;
+  background:var(--green);color:var(--cream);border:none;border-radius:5px;
+  padding:12px 16px;min-height:44px;cursor:pointer;box-shadow:0 3px 0 var(--green-dark);
+  transition:transform .12s,box-shadow .12s,background .2s;
+  min-width:0;
+}
+.btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 5px 0 var(--green-dark)}
+.btn:active:not(:disabled){transform:translateY(1px);box-shadow:0 1px 0 var(--green-dark)}
+.btn:disabled{background:#9aa397;box-shadow:none;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--green);border:2px solid var(--green);box-shadow:none}
+.btn.ghost:hover:not(:disabled){background:rgba(45,90,61,.08)}
+.btn.big{font-size:19px;padding:13px 36px}
+
+/* 选项按钮：默认米黄底 + 深绿边；红色只用于错误反馈 */
+.choice-btn{
+  display:inline-flex;align-items:center;justify-content:flex-start;gap:8px;
+  background:var(--cream);color:var(--green);border:2px solid var(--green);
+  box-shadow:0 2px 0 rgba(45,90,61,.25);text-align:left;
+}
+.choice-btn:hover:not(:disabled){background:#f0ebd8;transform:translateY(-2px);box-shadow:0 4px 0 rgba(45,90,61,.25)}
+.choice-btn:active:not(:disabled){transform:translateY(1px);box-shadow:0 1px 0 rgba(45,90,61,.25)}
+.choice-btn:disabled{background:var(--cream);color:var(--green);border-color:var(--green);opacity:1;cursor:default;box-shadow:none}
+.choice-btn.right:disabled{background:var(--green);color:var(--cream);border-color:var(--green)}
+.choice-btn.wrong:disabled{background:var(--red);color:#fff;border-color:var(--red)}
+.choice-btn.right b,.choice-btn.wrong b{color:#fff}
+.opt-badge{
+  margin-left:auto;font-size:12px;font-weight:600;letter-spacing:1px;
+  padding:2px 8px;border-radius:4px;background:rgba(255,255,255,.2);white-space:nowrap;
+}
+.opt-badge.err{background:rgba(0,0,0,.22)}
+
+/* ============ 通用演员定位 ============ */
+.actor{position:absolute;z-index:5}
+.hero-box{left:9%;bottom:96px;width:96px}
+.patient-box{right:11%;bottom:92px;width:132px}
+.cough{
+  position:absolute;top:-34px;right:-6px;background:var(--card);border:2px solid var(--green);
+  border-radius:14px;padding:3px 10px;font-size:13px;color:var(--green);font-weight:600;
+  white-space:nowrap;
+  animation:coughFloat 1.4s ease-in-out infinite;
+}
+.cough::after{
+  content:'';position:absolute;left:10px;bottom:-7px;width:10px;height:10px;
+  background:var(--card);border-right:2px solid var(--green);border-bottom:2px solid var(--green);
+  transform:rotate(45deg);
+}
+@keyframes coughFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+
+.patient-box.sad svg{animation:shake .5s ease}
+.patient-box.sad{filter:drop-shadow(0 0 14px rgba(204,51,51,.75))}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.p-mouth-sad{display:none}
+.patient-box.sad .p-mouth-sad{display:block}
+.patient-box.sad .p-mouth-calm,.patient-box.sad .p-eyes{display:none}
+
+/* ============ 遇 ============ */
+.narr{position:absolute;top:16px;left:16px;max-width:46%;font-size:clamp(15px,2.2vw,17px);line-height:2;z-index:6}
+.opts{
+  position:absolute;left:50%;bottom:24px;transform:translateX(-50%);
+  display:flex;gap:14px;flex-wrap:wrap;justify-content:center;z-index:8;
+  width:min(480px,92%);
+}
+.opts .choice-btn{min-width:0}
+
+/* ---- 遇 · 开场动线（牌坊 → 老伯出场 → 咳嗽 → 主角上前 → 气泡） ---- */
+.paifang{
+  position:absolute;right:2%;bottom:110px;
+  width:205px;z-index:2;pointer-events:none;
+}
+.paifang-svg{width:100%;display:block}
+/* 老伯：从牌坊门里走出（小→大），站定后循环咳嗽：震颤 + 红光 + 气泡脉冲 */
+.meet-wrap .patient-box{
+  right:28%;
+  animation:meetPatIn 1.6s ease .2s both,
+            meetGlow 2.8s ease-in-out 2.45s infinite;
+}
+@keyframes meetPatIn{
+  from{opacity:0;transform:translateX(var(--pat-walk,150px)) translateY(-6px) scale(.45)}
+  40%{opacity:1}
+  to{opacity:1;transform:none}
+}
+@keyframes meetPatShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+/* 循环震颤：每 2.8s 的前 18% 抖一轮，与选错时的咳嗽抖动一致 */
+@keyframes meetCoughShake{
+  0%,100%{transform:translateX(0)}
+  3%{transform:translateX(-4px)}6%{transform:translateX(4px)}
+  9%{transform:translateX(-4px)}12%{transform:translateX(4px)}
+  15%{transform:translateX(-2px)}18%{transform:translateX(0)}
+}
+.meet-wrap .patient-box svg{animation:meetCoughShake 2.8s ease-in-out 2.45s infinite}
+@keyframes meetGlow{
+  0%,100%{filter:drop-shadow(0 0 4px rgba(204,51,51,.28))}
+  9%{filter:drop-shadow(0 0 14px rgba(204,51,51,.6))}
+  24%{filter:drop-shadow(0 0 4px rgba(204,51,51,.28))}
+}
+/* 主角：稍后从左侧走上来 */
+.meet-wrap .hero-box{animation:meetHeroIn .9s ease 1.5s both}
+@keyframes meetHeroIn{
+  from{opacity:0;transform:translateX(-26vw)}
+  35%{opacity:1}
+  to{opacity:1;transform:none}
+}
+/* 咳嗽气泡：老伯站定后冒出，随后随咳嗽节奏脉冲 */
+.meet-wrap .cough{
+  opacity:0;transform:scale(.4);
+  animation:coughAppear .45s ease 2s forwards, meetCoughBubble 2.8s ease-in-out 2.45s infinite;
+}
+@keyframes coughAppear{to{opacity:1;transform:scale(1)}}
+@keyframes meetCoughBubble{
+  0%,100%{transform:translateY(0) scale(1)}
+  6%{transform:translateY(-5px) scale(1.12)}
+  12%{transform:translateY(0) scale(1)}
+  18%{transform:translateY(-4px) scale(1.06)}
+  24%{transform:translateY(0) scale(1)}
+  55%{transform:translateY(-5px)}
+  80%{transform:translateY(0)}
+}
+/* 出场咳嗽时同步换上难受表情（与后段 sad 脸一致）：咳嗽冒泡时换脸 */
+.meet-wrap .p-mouth-sad{display:block;opacity:0;animation:meetFaceSadIn .35s ease 2.1s forwards}
+.meet-wrap .p-mouth-calm,.meet-wrap .p-eyes{animation:meetFaceCalmOut .35s ease 2.1s forwards}
+@keyframes meetFaceSadIn{to{opacity:1}}
+@keyframes meetFaceCalmOut{to{opacity:0}}
+/* 主角的问话气泡（本身即推进按钮） */
+.hero-say{
+  position:absolute;left:calc(9% + 6px);bottom:228px;z-index:9;
+  font-family:inherit;font-size:clamp(15px,2.4vw,17px);font-weight:600;letter-spacing:1px;
+  color:var(--green);background:var(--card);border:2px solid var(--green);border-radius:14px;
+  padding:10px 16px;min-height:44px;cursor:pointer;box-shadow:0 3px 0 rgba(45,90,61,.25);
+  opacity:0;transform:scale(.5);transform-origin:left bottom;
+  animation:bubblePop .45s cubic-bezier(.34,1.56,.64,1) 3.5s forwards,
+            heroSayPulse 2s ease-in-out 4.1s infinite,
+            heroSayGlow 1.2s ease-in-out 4.1s infinite;
+}
+.hero-say::after{
+  content:'';position:absolute;left:16px;bottom:-9px;
+  border:9px solid transparent;border-top-color:var(--green);border-bottom:none;
+}
+.hero-say:hover{background:#f0ebd8}
+@keyframes bubblePop{to{opacity:1;transform:scale(1)}}
+@keyframes heroSayPulse{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+/* 引导点击：底色在米白与浅金之间交替闪烁 + 绿色光晕 */
+@keyframes heroSayGlow{
+  0%,100%{background-color:var(--card);box-shadow:0 3px 0 rgba(45,90,61,.25)}
+  50%{background-color:#f2d99b;box-shadow:0 3px 0 rgba(45,90,61,.25),0 0 18px rgba(45,90,61,.65)}
+}
+/* 可复用的咳嗽特效：气泡重新弹出 + 抖动 + 红光 */
+.patient-box.coughing{filter:drop-shadow(0 0 12px rgba(204,51,51,.65))}
+.patient-box.coughing svg{animation:meetPatShake .45s ease 2}
+.patient-box.coughing .cough{animation:coughPopB .4s ease both, coughFloat 1.4s ease-in-out .4s infinite}
+@keyframes coughPopB{from{transform:scale(.3);opacity:.2}60%{transform:scale(1.18)}to{transform:scale(1);opacity:1}}
+
+/* ============ 试 ============ */
+.prompt{
+  position:absolute;top:16px;left:50%;transform:translateX(-50%);
+  width:92%;text-align:center;font-size:clamp(15px,2.4vw,18px);font-weight:600;z-index:6;
+}
+.try-wrap .hero-box{left:24%}
+.try-wrap .patient-box{right:24%}
+/* 试错后的后果文字：人物上方，纯文字，层级最高 */
+.try-result-screen{
+  position:absolute;inset:0;z-index:70;display:flex;align-items:flex-start;justify-content:center;
+  padding:84px 16px 0;pointer-events:none;opacity:1;
+}
+.try-result-screen p{
+  color:var(--red);font-size:clamp(20px,6vw,34px);font-weight:900;letter-spacing:4px;line-height:1.6;text-align:center;
+  text-shadow:0 2px 0 rgba(255,255,255,.55);max-width:92%;
+}
+.try-result-screen.fade{opacity:0;transition:opacity .3s ease}
+/* 乌鸦带字飞过：B 选项的后果展示（文字与乌鸦作为一个整体，百分比位移） */
+.crow-wrap{
+  position:absolute;inset:0;z-index:70;pointer-events:none;overflow:hidden;
+  display:flex;flex-wrap:nowrap;align-items:flex-start;justify-content:center;gap:14px;padding:84px 16px 0;
+  transform:translateX(-100%);
+}
+.crow-wrap.fly{animation:crowFly 3s ease-in-out forwards}
+@keyframes crowFly{
+  0%{transform:translateX(-100%)}
+  30%{transform:translateX(0)}
+  62%{transform:translateX(0)}
+  100%{transform:translateX(120%)}
+}
+.crow-svg{width:110px;flex:none;filter:drop-shadow(0 4px 6px rgba(0,0,0,.3))}
+.crow-wing{transform-origin:64px 36px;animation:crowFlap .28s ease-in-out infinite alternate}
+@keyframes crowFlap{
+  from{transform:rotate(14deg)}
+  to{transform:rotate(-20deg)}
+}
+.crow-text{
+  flex:none;color:#333;font-size:clamp(14px,3.4vw,26px);font-weight:900;letter-spacing:1px;
+  text-shadow:0 2px 0 rgba(255,255,255,.55);white-space:nowrap;max-width:none;
+}
+/* 后果文字震颤 */
+.try-result-screen p.quake{animation:quake .36s ease-in-out 2}
+@keyframes quake{
+  0%,100%{transform:translate(0,0) rotate(0)}
+  15%{transform:translate(-4px,2px) rotate(-.8deg)}
+  30%{transform:translate(4px,-2px) rotate(.8deg)}
+  45%{transform:translate(-3px,-2px) rotate(-.6deg)}
+  60%{transform:translate(3px,2px) rotate(.6deg)}
+  75%{transform:translate(-2px,1px) rotate(-.4deg)}
+  90%{transform:translate(2px,-1px) rotate(.4deg)}
+}
+
+/* ============ 追打动画层 ============ */
+#chaseLayer{position:absolute;inset:0;z-index:30;pointer-events:none;overflow:hidden;opacity:1;transition:opacity .35s}
+#chaseLayer.out{opacity:0}
+/* 主角：在前面从左往右逃跑，被赭鞭撞飞后翻滚着从右上角飞出画面 */
+#chaseHero{
+  position:absolute;bottom:96px;left:0;width:84px;
+  transform:translateX(-120%);z-index:26;will-change:transform,left,filter;
+}
+#chaseLayer.run #chaseHero{animation:chaseHeroRun 2.2s cubic-bezier(.3,.05,.5,.95) forwards}
+#chaseLayer.run #chaseHero svg{animation:bob .2s ease-in-out infinite alternate}
+@keyframes bob{from{transform:translateY(0)}to{transform:translateY(-7px)}}
+@keyframes chaseHeroRun{
+  0%{left:0;transform:translateX(-120%) rotate(0);filter:none}
+  30%{left:42%;transform:translateX(0) rotate(0);filter:none}
+  34%{left:44%;transform:translateX(0) rotate(0);filter:brightness(2.6) saturate(4) hue-rotate(-28deg)}
+  38%{left:46%;transform:translateX(0) rotate(-6deg);filter:brightness(1.9) saturate(3) hue-rotate(-28deg)}
+  48%{left:58%;transform:translateX(0) translateY(-120px) rotate(28deg);filter:brightness(1.6) saturate(2)}
+  60%{left:72%;transform:translateX(0) translateY(-250px) rotate(76deg);filter:brightness(1.2)}
+  74%{left:88%;transform:translateX(0) translateY(-380px) rotate(132deg);filter:none}
+  86%{left:103%;transform:translateX(0) translateY(-460px) rotate(180deg);filter:none}
+  100%{left:103%;transform:translateX(0) translateY(-460px) rotate(180deg);filter:none}
+}
+
+/* 大型赭鞭：在主角屁股后面边追边喷火，加速撞上后把他顶飞，随后留在原地 */
+#chaseZb{
+  position:absolute;bottom:46px;left:0;width:260px;z-index:24;
+  transform:translateX(-180%);will-change:transform,left;
+}
+#chaseLayer.run #chaseZb{animation:chaseZbRun 2.2s cubic-bezier(.3,.05,.5,.95) forwards}
+@keyframes chaseZbRun{
+  0%{left:0;transform:translateX(-180%)}
+  30%{left:6%;transform:translateX(0)}
+  38%{left:15%;transform:translateX(0)}
+  46%{left:13.5%;transform:translateX(0)}
+  100%{left:17%;transform:translateX(0)}
+}
+#chaseZb .cz-svg{width:100%;height:auto;display:block;filter:drop-shadow(0 6px 10px rgba(0,0,0,.25))}
+.cz-flame{position:absolute;width:180px;height:62px;opacity:0;transition:opacity .15s;pointer-events:none}
+.cz-mouth{left:80%;top:32%}
+.cz-tail{right:88%;top:26%;transform:scaleX(-1);transform-origin:right center}
+#chaseLayer.fire .cz-flame{opacity:1}
+.cz-flame span{position:absolute;left:0;top:50%;transform-origin:left center;border-radius:50%}
+.cz-flame .fo{
+  width:100%;height:100%;transform:translateY(-50%);
+  background:radial-gradient(ellipse at 16% 50%,#ff6a00 0%,rgba(255,106,0,.85) 38%,rgba(255,106,0,0) 80%);
+  filter:blur(2px);animation:flameA .22s ease-in-out infinite alternate;
+}
+.cz-flame .fm{
+  width:74%;height:62%;transform:translateY(-50%);
+  background:radial-gradient(ellipse at 14% 50%,#ffb800 0%,rgba(255,184,0,.92) 42%,rgba(255,184,0,0) 82%);
+  animation:flameB .17s ease-in-out infinite alternate;
+}
+.cz-flame .fi{
+  width:42%;height:30%;transform:translateY(-50%);
+  background:radial-gradient(ellipse at 12% 50%,#fff 0%,#fff6cc 48%,rgba(255,255,255,0) 82%);
+  animation:flameC .13s ease-in-out infinite alternate;
+}
+.cz-flame b{position:absolute;top:50%;border-radius:50%;background:#ff8a00;filter:blur(7px);opacity:0;animation:trailFade .55s linear infinite}
+.cz-flame b.t1{left:78%;width:36px;height:36px;margin-top:-18px}
+.cz-flame b.t2{left:94%;width:24px;height:24px;margin-top:-12px;animation-delay:.22s}
+@keyframes flameA{
+  0%{transform:translateY(-50%) scaleX(.9) scaleY(.92) rotate(-2deg)}
+  100%{transform:translateY(-56%) scaleX(1.08) scaleY(1.05) rotate(2deg)}
+}
+@keyframes flameB{
+  0%{transform:translateY(-48%) scaleX(.82) scaleY(.9) rotate(2deg)}
+  100%{transform:translateY(-56%) scaleX(1.12) scaleY(1.12) rotate(-3deg)}
+}
+@keyframes flameC{
+  0%{transform:translateY(-50%) scaleX(.78) scaleY(.86)}
+  100%{transform:translateY(-54%) scaleX(1.16) scaleY(1.1)}
+}
+@keyframes trailFade{
+  0%{opacity:0;transform:translateX(-8px) scale(.6)}
+  35%{opacity:.85}
+  100%{opacity:0;transform:translateX(46px) scale(1.3)}
+}
+
+/* ============ 教 ============ */
+/* 纵向排列 + 可滚动：文字多时不会顶出舞台被 overflow:hidden 裁掉 */
+.teach-wrap{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;gap:12px;padding:20px 20px 76px;z-index:6;overflow-y:auto}
+.teach-main{display:flex;align-items:flex-start;justify-content:center;gap:20px;width:100%;min-width:0}
+.teach-doc{display:flex;gap:14px;max-width:58%;min-width:0;align-items:flex-start}
+.teach-doc .doctor-svg{width:94px;flex:none}
+.teach-text h3{color:var(--green);font-size:clamp(16px,2.6vw,18px);letter-spacing:3px;margin-bottom:6px}
+.teach-text p{font-size:clamp(14px,2.1vw,15.5px);line-height:1.8;margin-bottom:5px}
+.teach-text b{color:var(--red)}
+.teach-body{width:min(215px,40%);flex:none;display:flex;justify-content:center;min-width:0}
+.body-svg{width:100%;height:auto}
+.pt-dot{transform-box:fill-box;transform-origin:center;animation:ptPulse 1.5s ease-in-out infinite}
+@keyframes ptPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.4);opacity:.7}}
+.teach-foot{flex:none;display:flex;justify-content:center;width:100%}
+#teachNext{position:static;transform:none}
+
+/* ============ 用 ============ */
+.quiz-wrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:30px;padding:24px;z-index:6}
+.quiz-patient{position:relative;width:150px;flex:none}
+.quiz-patient .patient-box{position:relative;right:auto;bottom:auto;width:150px}
+.quiz-card{width:100%;max-width:460px;min-width:0}
+.quiz-progress{font-size:13px;color:var(--green);letter-spacing:2px;margin-bottom:6px}
+.quiz-card h3{font-size:clamp(16px,2.6vw,19px);color:var(--ink);margin-bottom:14px;line-height:1.6}
+.quiz-opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.quiz-opts .btn{font-size:15px;padding:12px 12px;letter-spacing:1px;text-align:left;min-width:0}
+.quiz-opts .btn b{color:#e8c25a;margin-right:8px}
+
+/* ============ 赭鞭 ============ */
+#companion{position:fixed;right:18px;bottom:14px;width:196px;z-index:60;user-select:none}
+#zbBubble{
+  position:relative;background:var(--card);border:2px solid var(--green);border-radius:10px;
+  padding:8px 12px 9px;margin-bottom:6px;min-height:56px;box-shadow:0 4px 10px rgba(45,90,61,.2);
+}
+#zbBubble::after{
+  content:'';position:absolute;bottom:-9px;right:44px;width:14px;height:14px;
+  background:var(--card);border-right:2px solid var(--green);border-bottom:2px solid var(--green);
+  transform:rotate(45deg);
+}
+#zbName{
+  display:inline-block;background:var(--red);color:#fff;font-weight:900;font-size:12.5px;
+  letter-spacing:2px;padding:2px 8px;border-radius:4px;margin-bottom:4px;transform:rotate(-2deg);
+}
+#zbText{display:block;font-size:14.5px;line-height:1.55;color:var(--ink)}
+#zbSvg{width:100%;height:auto;display:block;filter:drop-shadow(0 4px 6px rgba(0,0,0,.18)) drop-shadow(0 0 5px rgba(255,106,0,.3))}
+.zb-tail{transform-box:fill-box;transform-origin:left bottom}
+#zbSvg.wag{animation:zbHop .45s ease 3}
+#zbSvg.wag .zb-tail{animation:zbWag .45s ease-in-out 3}
+@keyframes zbHop{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes zbWag{0%,100%{transform:rotate(0)}50%{transform:rotate(-16deg)}}
+.zb-fire{transform-box:fill-box;transform-origin:right center;transform:scale(0);opacity:0}
+#zbSvg.fire .zb-fire{animation:zbFireB .9s ease forwards}
+@keyframes zbFireB{
+  0%{transform:scale(0);opacity:0}25%{transform:scale(1.15);opacity:1}
+  70%{transform:scale(1);opacity:1}100%{transform:scale(.2);opacity:0}
+}
+#zbSvg.fire{animation:zbShake .3s ease 2}
+@keyframes zbShake{0%,100%{transform:translateX(0)}50%{transform:translateX(-5px)}}
+
+/* ============ 通关 ============ */
+.overlay{
+  position:fixed;inset:0;z-index:55;display:flex;align-items:center;justify-content:center;
+  background:rgba(30,32,26,.55);backdrop-filter:blur(2px);
+}
+.win-box{
+  width:100%;max-width:430px;text-align:center;padding:34px 38px;margin:0 16px;
+  animation:winIn .5s ease both;
+}
+@keyframes winIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
+.win-seal{
+  width:86px;height:86px;margin:0 auto 14px;background:var(--red);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-weight:900;font-size:24px;
+  line-height:1.25;border-radius:8px;transform:rotate(-6deg);
+  box-shadow:inset 0 0 0 3px #fff,3px 3px 0 rgba(0,0,0,.2);letter-spacing:2px;
+}
+.win-box h2{color:var(--green);letter-spacing:6px;margin-bottom:10px}
+.win-box p{font-size:15.5px;line-height:2;margin-bottom:8px}
+.win-box .dim{color:#8a8571;font-size:13.5px;letter-spacing:2px;margin-bottom:16px}
+/* 双按钮并列：重新练习 / 前往下一关，样式统一沿用 .btn.big */
+.win-btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.win-btns .btn{flex:1;min-width:150px;padding-left:10px;padding-right:10px}
+
+/* ============ 关卡容器（每关一个，切换时整体隐藏/显示） ============ */
+.level{position:absolute;inset:0}
+#sceneContentY{position:absolute;inset:0}
+
+/* ============ 云门 · 遇/试 ============ */
+/* 牌坊淡入（与中府同一 paifangSVG，仅定位居中；缩小并架在云上） */
+.ym-gate{
+  position:absolute;left:50%;bottom:300px;transform:translateX(-50%);
+  width:190px;z-index:2;pointer-events:none;animation:gateIn .9s ease both;
+}
+@keyframes gateIn{from{opacity:0}to{opacity:1}}
+/* 云气：聚在牌坊底部，把门托在云上；横向微微飘动 + 透明度呼吸 */
+.ym-cloud-svg{position:absolute;fill:#fdfaf0;opacity:.75;z-index:3;pointer-events:none;animation:cloudDrift 4.6s ease-in-out infinite alternate}
+.ym-cloud-svg.c1{left:calc(50% - 132px);bottom:286px;width:120px}
+.ym-cloud-svg.c2{left:calc(50% + 2px);bottom:294px;width:130px;animation-duration:5.8s;animation-delay:.7s}
+.ym-cloud-svg.c3{left:calc(50% - 76px);bottom:304px;width:112px;animation-duration:3.9s;animation-delay:1.2s}
+@keyframes cloudDrift{from{transform:translateX(0);opacity:.5}to{transform:translateX(14px);opacity:.95}}
+/* 青年：从云上牌坊的门洞里跳下（下落 + 轻微弹动） */
+.ym-youth{--yjump:-256px;position:absolute;left:50%;bottom:88px;width:72px;z-index:6;opacity:0;transform:translateX(-50%)}
+.ym-youth.on{opacity:1}
+.ym-youth.jump{animation:yJump .85s cubic-bezier(.28,.84,.44,1) .5s forwards}
+@keyframes yJump{
+  0%{transform:translateX(-50%) translateY(var(--yjump,-256px));opacity:0}
+  15%{opacity:1}
+  62%{transform:translateX(-50%) translateY(0);opacity:1}
+  78%{transform:translateX(-50%) translateY(-18px)}
+  100%{transform:translateX(-50%) translateY(0);opacity:1}
+}
+/* 青年震动（复用 shake 同款节奏，但保留居中 transform） */
+.ym-youth.shake-y{animation:yShake .5s ease}
+@keyframes yShake{0%,100%{transform:translateX(-50%)}25%{transform:translateX(calc(-50% - 6px))}75%{transform:translateX(calc(-50% + 6px))}}
+/* 青年的「嘶…」气泡 */
+.ym-bubble{
+  position:absolute;top:-38px;left:56%;background:var(--card);border:2px solid var(--green);
+  border-radius:12px;padding:3px 12px;font-size:14px;font-weight:600;color:var(--green);
+  opacity:0;transform:scale(.6);transition:.25s;white-space:nowrap;z-index:7;
+}
+.ym-youth.bubble-on .ym-bubble{opacity:1;transform:scale(1)}
+/* 问话按钮：淡入（定位沿用 .opts）；未显示时不可点击 */
+.ym-ask{opacity:0;pointer-events:none;transition:opacity .3s}
+.ym-ask.show{opacity:1;pointer-events:auto}
+/* 闪金引导：与中府问话气泡同款节奏，底色脉动 + 金色光晕 */
+.ym-ask.show .btn{animation:ymAskGlow 1.2s ease-in-out infinite}
+@keyframes ymAskGlow{
+  0%,100%{background-color:var(--green);box-shadow:0 3px 0 var(--green-dark),0 0 0 rgba(216,181,106,0)}
+  50%{background-color:#3f7a55;box-shadow:0 3px 0 var(--green-dark),0 0 18px rgba(216,181,106,.95),0 0 30px rgba(216,181,106,.45)}
+}
+/* 答题区里的静态青年 */
+.ym-youth.ym-static{position:relative;left:auto;bottom:auto;transform:none;opacity:1;width:120px}
+/* 大夫口播补充 */
+.teach-note{margin-top:8px;padding-top:8px;border-top:1px dashed rgba(45,90,61,.4);color:#5c5646;font-size:14.5px;line-height:1.9}
+
+/* ============ 选关页 ============ */
+#levelSelect{width:100%;display:flex;flex-direction:column;align-items:center;gap:16px;padding:26px 0 10px}
+.ls-title{color:var(--green);font-size:clamp(22px,6vw,28px);font-weight:900;letter-spacing:8px;text-align:center;text-indent:8px}
+.ls-sub{color:#6b6350;font-size:clamp(13px,3.4vw,15px);letter-spacing:3px;margin-top:-6px}
+.ls-list{display:flex;flex-direction:column;gap:12px;width:min(420px,100%)}
+.ls-item{
+  display:flex;align-items:center;gap:14px;width:100%;text-align:left;
+  font-family:inherit;font-size:clamp(16px,4.2vw,18px);font-weight:600;letter-spacing:2px;
+  color:var(--green);background:var(--card);border:2px solid var(--green);border-radius:8px;
+  padding:14px 16px;min-height:56px;cursor:pointer;box-shadow:0 3px 0 rgba(45,90,61,.28);
+  transition:transform .12s,box-shadow .12s,background .2s;
+}
+.ls-item:hover{transform:translateY(-2px);background:#f0ebd8;box-shadow:0 5px 0 rgba(45,90,61,.28)}
+.ls-item:active{transform:translateY(1px);box-shadow:0 1px 0 rgba(45,90,61,.28)}
+.ls-no{
+  flex:none;background:var(--red);color:#fff;font-size:12.5px;letter-spacing:1px;
+  padding:4px 8px;border-radius:4px;transform:rotate(-3deg);white-space:nowrap;
+}
+.ls-name{flex:1;min-width:0;color:var(--green)}
+.ls-go{flex:none;color:var(--red);font-size:13px;letter-spacing:1px}
+.ls-tip{color:#6b6350;font-size:clamp(12.5px,3.2vw,14px);line-height:1.9;text-align:center;max-width:min(420px,100%)}
+
+/* ============ 响应式 ============ */
+@media (max-width:768px){
+  #stage{height:600px}
+  #app{padding:10px 10px 150px;gap:12px}
+  #hud{justify-content:center;gap:10px}
+  .narr{max-width:none;left:12px;right:12px;font-size:15px}
+  /* 选项竖排、占满宽度，方便点按；底部留白避让右下角赭鞭 */
+  .opts{width:92%;flex-direction:column;align-items:stretch;gap:12px;padding-bottom:100px}
+  .opts .choice-btn{width:100%}
+  .quiz-opts{grid-template-columns:1fr}
+  .quiz-opts .btn{padding:10px 12px;font-size:15px}
+  /* SVG 与动画元素随屏缩放 */
+  .hero-box{width:78px}
+  .patient-box{width:104px}
+  .quiz-patient,.quiz-patient .patient-box{width:84px}
+  /* 选项区上移后，遇/试阶段的演员同步抬高，避免被选项遮挡 */
+  .meet-wrap .hero-box{bottom:200px}
+  .meet-wrap .patient-box{bottom:196px}
+  .try-wrap .hero-box{left:5%;bottom:312px;width:64px}
+  .try-wrap .patient-box{right:5%;bottom:308px;width:88px}
+  .teach-wrap{flex-direction:column;align-items:center;overflow-y:auto;gap:12px;padding:16px 14px 76px}
+  .teach-main{flex-direction:column;align-items:center;gap:12px}
+  .teach-doc{max-width:100%}
+  .teach-doc .doctor-svg{width:78px}
+  .teach-body{width:min(215px,62%)}
+  /* 答题阶段：自上而下排列，底部留白避让赭鞭 */
+  .quiz-wrap{flex-direction:column;justify-content:flex-start;gap:8px;padding:40px 16px 96px;overflow-y:auto}
+  .quiz-card{width:100%}
+  /* 追打动画整体缩小 */
+  #chaseZb{width:170px;bottom:56px}
+  .cz-flame{width:110px;height:42px}
+  #chaseHero{width:60px;bottom:110px}
+  /* 乌鸦加大 + 字幕收紧，保证单行 */
+  .crow-svg{width:52px}
+  .crow-wrap{gap:6px;padding:120px 8px 0}
+  .crow-text{font-size:13.5px;letter-spacing:.5px}
+  /* 后果红字同样放在人物上方 */
+  .try-result-screen{padding-top:120px}
+  /* 牌坊收窄，老伯站门左前方，出场位移同步缩短 */
+  .paifang{width:40%;bottom:190px}
+  .meet-wrap .patient-box{right:24%;--pat-walk:70px}
+  /* 问话气泡移到舞台中下空白区（避开老伯咳嗽气泡与牌坊），尾巴改朝左指向主角 */
+  .hero-say{left:30%;bottom:140px;font-size:15px;padding:9px 14px;transform-origin:left bottom}
+  .hero-say::after{left:-9px;top:14px;bottom:auto;border:9px solid transparent;border-right-color:var(--green);border-left:none}
+  #companion{width:132px;right:8px;bottom:8px}
+  #zbText{font-size:13.5px}
+  .hero-box{left:4%}.patient-box{right:4%}
+  /* 云门：牌坊缩小并架在云上，青年落在竖排选项上方，从云上门洞跳下 */
+  .ym-gate{width:min(120px,34vw);bottom:430px}
+  .ym-youth{width:56px;left:50%;bottom:320px;--yjump:-150px}
+  .ym-cloud-svg.c1{left:calc(50% - 96px);bottom:416px;width:90px}
+  .ym-cloud-svg.c2{left:calc(50% + 6px);bottom:422px;width:96px}
+  .ym-cloud-svg.c3{left:calc(50% - 52px);bottom:430px;width:82px}
+  .ym-youth.ym-static{width:84px}
+}
+@media (max-width:380px){
+  #app{padding:8px 8px 140px;gap:10px}
+  #stage{height:560px}
+  .seal-step{width:30px;height:30px;font-size:14px}
+  #chapterSeal{font-size:12px;padding:5px 6px}
+  #levelTitle{letter-spacing:1px}
+  .narr{font-size:14px;line-height:1.8}
+  .card{padding:14px 14px}
+  .opts{gap:10px;bottom:16px}
+  .meet-wrap .hero-box{bottom:188px}
+  .meet-wrap .patient-box{bottom:184px}
+  .try-wrap .hero-box{bottom:302px;width:58px}
+  .try-wrap .patient-box{bottom:300px;width:80px}
+  .quiz-wrap{padding:34px 14px 92px}
+  .crow-svg{width:46px}
+  .crow-text{font-size:12.5px}
+  .crow-wrap{padding-top:110px}
+  .try-result-screen{padding-top:110px}
+  .paifang{bottom:180px}
+  .hero-say{font-size:14px;padding:8px 12px}
+  #chaseZb{width:140px}
+  #companion{width:112px}
+  .win-box{padding:26px 20px}
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- 选关页（按钮由 POINTS 自动生成，新增穴位自动出现） -->
+  <section id="levelSelect" class="hidden">
+    <h1 class="ls-title">循经台</h1>
+    <p class="ls-sub">卷一 · 手太阴肺经</p>
+    <div class="ls-list" id="lsList"></div>
+    <p class="ls-tip">新手建议从第一穴「中府」开始；已学过的穴位可直接跳关。</p>
+  </section>
+
+  <!-- 顶部 HUD -->
+  <header id="hud">
+    <div class="hud-left">
+      <span id="chapterSeal">循经台</span>
+      <span id="levelTitle">卷一 · 手太阴肺经 · 第一穴：中府</span>
+    </div>
+    <div id="phaseSeals">
+      <span class="seal-step" data-p="meet">遇</span><span class="seal-arrow">→</span>
+      <span class="seal-step" data-p="try">试</span><span class="seal-arrow">→</span>
+      <span class="seal-step" data-p="teach">教</span><span class="seal-arrow">→</span>
+      <span class="seal-step" data-p="quiz">用</span>
+    </div>
+  </header>
+
+  <!-- 舞台 -->
+  <main id="stage">
+    <!-- 循经台背景 -->
+    <svg id="sceneBg" viewBox="0 0 960 540" preserveAspectRatio="xMidYMax slice">
+      <defs>
+        <linearGradient id="skyG" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#f2ecd6"/><stop offset="1" stop-color="#e3dfc2"/>
+        </linearGradient>
+      </defs>
+      <rect width="960" height="540" fill="url(#skyG)"/>
+      <circle cx="830" cy="86" r="36" fill="#c33" opacity=".85"/>
+      <g fill="#fdfaf0" opacity=".9">
+        <ellipse cx="180" cy="80" rx="52" ry="16"/><ellipse cx="220" cy="70" rx="40" ry="13"/>
+        <ellipse cx="600" cy="120" rx="60" ry="15"/><ellipse cx="646" cy="110" rx="38" ry="12"/>
+      </g>
+      <path d="M0 340 L150 200 L300 340 Z" fill="#9dbb9f"/>
+      <path d="M220 340 L400 160 L580 340 Z" fill="#7ea489"/>
+      <path d="M520 340 L700 190 L880 340 Z" fill="#5c8a6e"/>
+      <path d="M740 340 L880 220 L1020 340 Z" fill="#9dbb9f"/>
+      <rect y="340" width="960" height="200" fill="#d9dcb6"/>
+      <path d="M0 340 Q480 324 960 340 L960 356 Q480 340 0 356 Z" fill="#b9c48f"/>
+      <g stroke="#5c8a6e" stroke-width="3" stroke-linecap="round" fill="none" opacity=".8">
+        <path d="M80 470 q4 -22 0 -34 M72 448 q-12 -8 -14 -18 M88 448 q12 -8 14 -18"/>
+        <path d="M320 500 q4 -22 0 -34 M312 478 q-12 -8 -14 -18 M328 478 q12 -8 14 -18"/>
+        <path d="M700 480 q4 -22 0 -34 M692 458 q-12 -8 -14 -18 M708 458 q12 -8 14 -18"/>
+        <path d="M880 510 q4 -22 0 -34 M872 488 q-12 -8 -14 -18 M888 488 q12 -8 14 -18"/>
+      </g>
+      <g fill="#c33">
+        <circle cx="80" cy="432" r="4"/><circle cx="320" cy="462" r="4"/>
+        <circle cx="700" cy="442" r="4"/><circle cx="880" cy="472" r="4"/>
+      </g>
+    </svg>
+
+    <!-- 中府（每关一个容器，切换关卡时整体隐藏/显示） -->
+    <div id="level-zhongfu" class="level">
+      <div id="sceneContent"></div>
+    </div>
+    <!-- 云门 -->
+    <div id="level-yunmen" class="level hidden">
+      <div id="sceneContentY"></div>
+    </div>
+
+    <!-- 追打动画层 -->
+    <div id="chaseLayer" class="hidden">
+      <div id="chaseHero"></div>
+      <div id="chaseZb">
+        <svg viewBox="0 0 170 130" class="cz-svg">
+          <defs>
+            <linearGradient id="czFlameG" x1="0" y1="1" x2="0" y2="0">
+              <stop offset="0" stop-color="#c33"/><stop offset="1" stop-color="#f2a03d"/>
+            </linearGradient>
+          </defs>
+          <g transform="translate(170,0) scale(-1,1)">
+            <path d="M140 74 C154 62 152 42 142 30 C160 42 164 66 148 82 Z" fill="url(#czFlameG)" stroke="#a83a2a" stroke-width="2"/>
+            <g fill="#8a4226">
+              <rect x="66" y="92" width="10" height="24" rx="5"/>
+              <rect x="84" y="94" width="10" height="24" rx="5"/>
+              <rect x="108" y="94" width="10" height="24" rx="5"/>
+              <rect x="126" y="92" width="10" height="24" rx="5"/>
+            </g>
+            <ellipse cx="100" cy="78" rx="44" ry="26" fill="#b3572f" stroke="#7a3520" stroke-width="3"/>
+            <ellipse cx="100" cy="86" rx="30" ry="15" fill="#d9a066" opacity=".8"/>
+            <g>
+              <path d="M60 44 Q74 34 72 50 Q82 46 76 58" fill="none" stroke="#c33" stroke-width="4" stroke-linecap="round"/>
+              <ellipse cx="46" cy="52" rx="26" ry="21" fill="#b3572f" stroke="#7a3520" stroke-width="3"/>
+              <ellipse cx="26" cy="58" rx="13" ry="9.5" fill="#d9a066" stroke="#7a3520" stroke-width="2"/>
+              <circle cx="18" cy="56" r="2.2" fill="#7a3520"/>
+              <circle cx="46" cy="46" r="4.2" fill="#222"/>
+              <circle cx="47.5" cy="44.5" r="1.4" fill="#fff"/>
+              <path d="M38 38 Q46 33 54 38" stroke="#7a3520" stroke-width="2.5" fill="none"/>
+              <path d="M50 32 C50 20 58 13 66 9 C61 17 61 25 63 33 Z" fill="#e8c25a" stroke="#a8822f" stroke-width="2"/>
+              <path d="M56 38 Q68 30 70 40 Q62 42 56 38 Z" fill="#8a4226"/>
+              <path d="M24 62 Q30 66 36 63" stroke="#7a3520" stroke-width="2" fill="none"/>
+              <circle cx="34" cy="58" r="3.4" fill="#e2907a" opacity=".7"/>
+            </g>
+          </g>
+        </svg>
+        <div class="cz-flame cz-mouth">
+          <span class="fo"></span><span class="fm"></span><span class="fi"></span>
+          <b class="t1"></b><b class="t2"></b>
+        </div>
+        <div class="cz-flame cz-tail">
+          <span class="fo"></span><span class="fm"></span><span class="fi"></span>
+          <b class="t1"></b><b class="t2"></b>
+        </div>
+      </div>
+    </div>
+
+    <div id="stageFlash"></div>
+  </main>
+</div>
+
+<!-- 赭鞭（全程陪伴） -->
+<div id="companion">
+  <div id="zbBubble">
+    <span id="zbName">赭鞭</span>
+    <span id="zbText">哼，跟着你。</span>
+  </div>
+  <svg id="zbSvg" viewBox="0 0 170 130">
+    <defs>
+      <linearGradient id="flameG" x1="0" y1="1" x2="0" y2="0">
+        <stop offset="0" stop-color="#c33"/><stop offset="1" stop-color="#f2a03d"/>
+      </linearGradient>
+      <linearGradient id="fireG" x1="1" y1="0" x2="0" y2="0">
+        <stop offset="0" stop-color="#f2a03d"/><stop offset="1" stop-color="#c33"/>
+      </linearGradient>
+    </defs>
+    <g class="zb-tail">
+      <path d="M140 74 C154 62 152 42 142 30 C160 42 164 66 148 82 Z" fill="url(#flameG)" stroke="#a83a2a" stroke-width="2"/>
+    </g>
+    <g fill="#8a4226">
+      <rect x="66" y="92" width="10" height="24" rx="5"/>
+      <rect x="84" y="94" width="10" height="24" rx="5"/>
+      <rect x="108" y="94" width="10" height="24" rx="5"/>
+      <rect x="126" y="92" width="10" height="24" rx="5"/>
+    </g>
+    <ellipse cx="100" cy="78" rx="44" ry="26" fill="#b3572f" stroke="#7a3520" stroke-width="3"/>
+    <ellipse cx="100" cy="86" rx="30" ry="15" fill="#d9a066" opacity=".8"/>
+    <g class="zb-head">
+      <path d="M60 44 Q74 34 72 50 Q82 46 76 58" fill="none" stroke="#c33" stroke-width="4" stroke-linecap="round"/>
+      <ellipse cx="46" cy="52" rx="26" ry="21" fill="#b3572f" stroke="#7a3520" stroke-width="3"/>
+      <ellipse cx="26" cy="58" rx="13" ry="9.5" fill="#d9a066" stroke="#7a3520" stroke-width="2"/>
+      <circle cx="18" cy="56" r="2.2" fill="#7a3520"/>
+      <circle cx="46" cy="46" r="4.2" fill="#222"/>
+      <circle cx="47.5" cy="44.5" r="1.4" fill="#fff"/>
+      <path d="M38 38 Q46 33 54 38" stroke="#7a3520" stroke-width="2.5" fill="none"/>
+      <path d="M50 32 C50 20 58 13 66 9 C61 17 61 25 63 33 Z" fill="#e8c25a" stroke="#a8822f" stroke-width="2"/>
+      <path d="M56 38 Q68 30 70 40 Q62 42 56 38 Z" fill="#8a4226"/>
+      <path d="M24 62 Q30 66 36 63" stroke="#7a3520" stroke-width="2" fill="none"/>
+      <circle cx="34" cy="58" r="3.4" fill="#e2907a" opacity=".7"/>
+    </g>
+    <g class="zb-fire">
+      <path d="M16 58 C2 52 2 64 10 66 C-2 66 0 76 14 72 C6 80 18 84 22 74 C30 80 36 72 30 66 C36 62 30 54 24 58 Z" fill="url(#fireG)" opacity=".95"/>
+    </g>
+  </svg>
+</div>
+
+<!-- 通关画面（通用模块：只写一份，文案与跳转由各穴位 win 配置填入） -->
+<div id="winOverlay" class="overlay hidden">
+  <div class="card win-box">
+    <div class="win-seal" id="winSeal"></div>
+    <h2 id="winTitle"></h2>
+    <p id="winText"></p>
+    <p class="dim" id="winDim"></p>
+    <div class="win-btns">
+      <button id="againBtn" class="btn big" type="button"></button>
+      <button id="nextBtn" class="btn big" type="button"></button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ============================================================
+ * 穴位数据（新增穴位时，在 POINTS 里追加一个对象即可）
+ * ============================================================ */
+const POINTS = {
+  zhongfu: {
+    id: 'zhongfu',
+    chapter: '循经台',
+    title: '卷一 · 手太阴肺经 · 第一穴：中府',
+    name: '中府',
+    /* 【遇】 */
+    meet: {
+      text: '循经台 · 晨。雾气未散，药香浮动。前方一位老丈佝偻着身子，咳得撕心裂肺，脸涨得通红，一只手死死捂着胸口，似乎喘不上气来。',
+      act: '你没有犹豫，快步上前扶住了他。',
+      nextBtn: '老伯，您没事吧？',
+    },
+    /* 【试】 */
+    tryStep: {
+      prompt: '老丈咳得直不起腰，你决定先做点什么——',
+      options: [
+        {
+          text: '上去帮他拍背顺气',
+          tier: 'wrong',
+          consequence: '⚠️ 拍错位置，他咳得更厉害了！',
+          feedback: '拍背顺气方向没错，但你拍错位置了！',
+        },
+        {
+          text: '按住他胸口正中间',
+          tier: 'crow',
+          consequence: '按下去他呼吸缓了点，但眉头还是皱着。',
+          feedback: '嗯…你直觉还行，按的那个位置确实能缓一口气。但没按到真正堵着的地方。接着看。',
+        },
+        {
+          text: '扶他坐直，手放锁骨下方外侧试试',
+          tier: 'right',
+          feedback: '嗯，手感不错。虽然你还不知道它叫什么。',
+        },
+      ],
+    },
+    /* 【教】 */
+    teach: {
+      speaker: '大夫曰',
+      lines: [
+        ['位置', '锁骨下窝外侧，前正中线旁开 6 寸。'],
+        ['功效', '止咳平喘，清泻肺热。'],
+        ['主治', '咳嗽、气喘、胸满痛。'],
+      ],
+      nextBtn: '我记住了 →',
+    },
+    /* 【用】 */
+    quiz: [
+      { q: '中府穴在哪里？', options: ['锁骨下窝', '肘横纹', '手腕', '脚背'], answer: 0 },
+      { q: '中府穴主治什么？', options: ['咳嗽气喘', '头痛', '腹痛', '腰痛'], answer: 0 },
+      { q: '病人咳嗽胸闷，该取哪一穴？', options: ['中府', '合谷', '足三里', '涌泉'], answer: 0 },
+    ],
+    /* 通关面板配置（面板是各穴共用的通用模块，此处只填本穴的文案与去向） */
+    win: {
+      seal: '中府<br>已通',
+      title: '学以致用',
+      text: '你准确寻得中府穴，为老丈施以按压。片刻之后，老丈咳止喘平，拱手相谢。',
+      dim: '循经台 · 卷一 · 手太阴肺经 · 第一穴：中府 —— 完',
+      zb: '中府过了，但这条经才刚开始，走，下一关。',
+      againBtn: '重新练习',
+      nextBtn: '前往下一关',
+      next: 'yunmen',
+    },
+    /* 人体轮廓上的穴位标注（供通用 bodySVG 读取） */
+    body: { dots: [{ x: 120, y: 128 }, { x: 180, y: 128 }], label: '中府' },
+  },
+  /* 第二穴 · 云门 */
+  yunmen: {
+    id: 'yunmen',
+    chapter: '循经台',
+    title: '卷一 · 手太阴肺经 · 第二穴：云门',
+    name: '云门',
+    /* 【遇】青年从云门牌坊上跳下，捂肩喊疼 */
+    meet: {
+      askBtn: '你肩膀怎么了？',
+    },
+    /* 【试】tier 与中府一致：wrong=赭鞭追打 / crow=乌鸦飞字 / right=正确推进 */
+    tryStep: {
+      prompt: '青年单手扶柱，一手捂肩，脸色发白——',
+      options: [
+        {
+          text: '用力帮他掰开肩膀活动',
+          tier: 'wrong',
+          feedback: '好心办坏事，他那是气堵在云门，不是关节卡住了。硬掰只会把气憋得更死。',
+          ouch: '嘶…疼！',
+        },
+        {
+          text: '按住他肩膀正上方的锁骨窝',
+          tier: 'crow',
+          consequence: '嗯…方向对了，按的位置也接近了。但稍微偏了点，再往外一点才是正解。',
+          feedback: '乌鸦说得在理。',
+        },
+        {
+          text: '扶他站直，手放锁骨下窝中央旁开6寸',
+          tier: 'right',
+          feedback: '嗯，这一按，倒是找对门了。',
+        },
+      ],
+    },
+    /* 【教】 */
+    teach: {
+      speaker: '大夫曰',
+      lines: [
+        ['位置', '锁骨下窝中央，前正中线旁开 6 寸。'],
+        ['功效', '宣肺止咳，宽胸理气。'],
+        ['主治', '咳嗽、气喘、胸痛、肩背痛。'],
+      ],
+      note: '与中府同水平，中府在外侧，云门在中央，一外一中如门户两侧。',
+      nextBtn: '明白了，开始实践',
+    },
+    /* 【用】 */
+    quiz: [
+      { q: '云门穴在哪？', options: ['锁骨下窝中央', '肘横纹', '手腕', '肩胛骨内侧'], answer: 0 },
+      { q: '云门穴主治什么？', options: ['头痛', '咳嗽气喘胸痛', '腹痛', '腰痛'], answer: 1 },
+      { q: '病人胸闷抬臂困难该选？', options: ['云门', '合谷', '足三里', '涌泉'], answer: 0 },
+    ],
+    /* 人体轮廓上的穴位标注：只标云门一个点 */
+    body: { dots: [{ x: 150, y: 124 }], label: '云门' },
+    /* 通关面板配置 */
+    win: {
+      seal: '云门<br>已通',
+      title: '门户洞开',
+      text: '你扶青年站直，拇指落于云门穴缓缓按揉。片刻，青年肩头一松，抬臂自如。',
+      dim: '循经台 · 卷一 · 手太阴肺经 · 第二穴：云门 —— 完',
+      zb: '云门也拿下了，从云里跳下来的那位你没白救。往下走。',
+      againBtn: '重新练习',
+      nextBtn: '前往下一关',
+      next: null,   /* 尺泽尚未实现：按钮保留占位，点击仅提示 */
+    },
+  },
+};
+
+/* ============================================================
+ * SVG 角色
+ * ============================================================ */
+function heroSVG(){
+  return `
+  <svg viewBox="0 0 80 120" class="hero-svg">
+    <circle cx="40" cy="9" r="6.5" fill="#3a2a1a"/>
+    <circle cx="40" cy="28" r="16" fill="#f2c9a0" stroke="#2d5a3d" stroke-width="2.5"/>
+    <path d="M26 22 Q40 8 54 22 L54 17 Q40 4 26 17 Z" fill="#3a2a1a"/>
+    <circle cx="34" cy="27" r="2" fill="#222"/>
+    <circle cx="46" cy="27" r="2" fill="#222"/>
+    <path d="M35 34 Q40 37 45 34" stroke="#a55" stroke-width="1.6" fill="none"/>
+    <path d="M40 44 C24 50 20 80 18 112 L62 112 C60 80 56 50 40 44 Z" fill="#2d5a3d" stroke="#1e3d29" stroke-width="2"/>
+    <path d="M24 62 L13 86" stroke="#2d5a3d" stroke-width="7" stroke-linecap="round"/>
+    <path d="M56 62 L67 86" stroke="#2d5a3d" stroke-width="7" stroke-linecap="round"/>
+    <path d="M22 84 L58 84" stroke="#c33" stroke-width="6"/>
+    <circle cx="40" cy="84" r="4" fill="#f5f0e0"/>
+  </svg>`;
+}
+function crowSVG(){
+  return `
+  <svg viewBox="0 0 120 70" class="crow-svg">
+    <path class="crow-wing" d="M46 38 Q64 6 96 12 Q74 26 60 44 Z" fill="#3a3a3a"/>
+    <ellipse cx="58" cy="42" rx="26" ry="15" fill="#222"/>
+    <circle cx="84" cy="30" r="11" fill="#222"/>
+    <path d="M94 31 L110 35 L94 37 Z" fill="#e8a33d"/>
+    <circle cx="87" cy="27" r="2.6" fill="#fff"/>
+    <circle cx="87.8" cy="27.5" r="1.2" fill="#111"/>
+    <path d="M34 44 L14 52 L36 54 Z" fill="#2c2c2c"/>
+    <path d="M50 54 L48 62 M62 55 L62 63" stroke="#3a3a3a" stroke-width="2.5" stroke-linecap="round"/>
+  </svg>`;
+}
+/* 门牌坊：木质立柱 + 飞檐 + 暗红牌匾（牌匾字按穴位传入） */
+function paifangSVG(text){
+  return `
+  <svg viewBox="0 0 300 260" class="paifang-svg">
+    <rect x="140" y="10" width="20" height="14" rx="3" fill="#476b52" stroke="#2a4030" stroke-width="2"/>
+    <path d="M8 82 Q60 34 150 30 Q240 34 292 82 L278 86 Q270 62 254 56 Q150 32 46 56 Q30 62 22 86 Z"
+      fill="#476b52" stroke="#2a4030" stroke-width="2"/>
+    <rect x="112" y="84" width="76" height="34" rx="4" fill="#8a2f26" stroke="#d8b56a" stroke-width="2.5"/>
+    <rect x="117" y="89" width="66" height="24" rx="2" fill="none" stroke="#d8b56a" stroke-width="1" opacity=".7"/>
+    <text x="151" y="108" text-anchor="middle" font-size="21" font-weight="900" fill="#f5f0e0" letter-spacing="5">${text}</text>
+    <rect x="34" y="122" width="232" height="12" rx="3" fill="#8a5f36" stroke="#5a3a20" stroke-width="2"/>
+    <rect x="46" y="134" width="16" height="116" fill="#7a5230" stroke="#5a3a20" stroke-width="2"/>
+    <rect x="238" y="134" width="16" height="116" fill="#7a5230" stroke="#5a3a20" stroke-width="2"/>
+    <rect x="39" y="248" width="30" height="10" rx="3" fill="#9a9a8a" stroke="#6a6a5a" stroke-width="1.5"/>
+    <rect x="231" y="248" width="30" height="10" rx="3" fill="#9a9a8a" stroke="#6a6a5a" stroke-width="1.5"/>
+  </svg>`;
+}
+function patientSVG(){
+  return `
+  <svg viewBox="0 0 110 140" class="patient-svg">
+    <path d="M55 52 C34 58 29 96 27 132 L83 132 C81 96 76 58 55 52 Z" fill="#71808f" stroke="#4d5a68" stroke-width="2"/>
+    <path d="M40 76 L58 64" stroke="#ecc39b" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="55" cy="30" r="18" fill="#ecc39b" stroke="#4d5a68" stroke-width="2"/>
+    <path d="M37 24 Q55 6 73 24 L73 18 Q55 0 37 18 Z" fill="#cfcfcf"/>
+    <path d="M45 42 Q55 62 55 66 Q55 62 65 42 Q60 50 55 50 Q50 50 45 42 Z" fill="#e3e3e3" stroke="#c9c9c9"/>
+    <g class="p-eyes">
+      <path d="M44 29 Q48 26 52 29" stroke="#333" stroke-width="2" fill="none"/>
+      <path d="M58 29 Q62 26 66 29" stroke="#333" stroke-width="2" fill="none"/>
+    </g>
+    <ellipse class="p-mouth-calm" cx="55" cy="37" rx="4" ry="5" fill="#8a4a3a"/>
+    <g class="p-mouth-sad">
+      <path d="M48 41 Q55 35 62 41" stroke="#7a3520" stroke-width="2.5" fill="none"/>
+      <path d="M43 24 L51 27" stroke="#333" stroke-width="2"/>
+      <path d="M67 24 L59 27" stroke="#333" stroke-width="2"/>
+    </g>
+  </svg>`;
+}
+function doctorSVG(){
+  return `
+  <svg viewBox="0 0 90 150" class="doctor-svg">
+    <path d="M28 20 L62 20 L57 6 L33 6 Z" fill="#3d3d3d"/>
+    <path d="M28 17 L8 12" stroke="#3d3d3d" stroke-width="4" stroke-linecap="round"/>
+    <path d="M62 17 L82 12" stroke="#3d3d3d" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="45" cy="34" r="15" fill="#ecc39b" stroke="#555" stroke-width="2"/>
+    <circle cx="39" cy="33" r="1.8" fill="#222"/><circle cx="51" cy="33" r="1.8" fill="#222"/>
+    <path d="M36 28 Q39 26 42 28 M48 28 Q51 26 54 28" stroke="#666" stroke-width="1.6" fill="none"/>
+    <path d="M38 46 Q45 92 45 96 Q45 92 52 46 Q49 54 45 54 Q41 54 38 46 Z" fill="#ececec" stroke="#cfcfcf"/>
+    <path d="M45 50 C29 56 25 100 23 142 L67 142 C65 100 61 56 45 50 Z" fill="#8f8f8f" stroke="#666" stroke-width="2"/>
+    <path d="M45 50 L37 66 M45 50 L53 66" stroke="#f5f0e0" stroke-width="3"/>
+    <circle cx="45" cy="88" r="7" fill="#ecc39b" stroke="#666"/>
+  </svg>`;
+}
+/* 人体轮廓 + 穴位标注：红点与标签由各穴位 body 配置传入（云门只传一个点） */
+function bodySVG(body){
+  const dotEls = body.dots.map(d => `<circle class="pt-dot" cx="${d.x}" cy="${d.y}" r="7" fill="#c33"/>`).join('');
+  const ld = body.dots.reduce((a, b) => (b.x > a.x ? b : a));
+  return `
+<svg viewBox="0 0 300 400" class="body-svg">
+  <g fill="none" stroke="#2d5a3d" stroke-width="3" stroke-linecap="round">
+    <circle cx="150" cy="56" r="30"/>
+    <path d="M150 86 L150 98"/>
+    <path d="M118 102 Q150 92 182 102 C197 116 203 142 201 170 C199 198 193 220 187 238 L113 238 C107 220 101 198 99 170 C97 142 103 116 118 102 Z"/>
+    <path d="M112 110 C94 128 85 168 84 214"/>
+    <circle cx="84" cy="222" r="7"/>
+    <path d="M188 110 C206 128 215 168 216 214"/>
+    <circle cx="216" cy="222" r="7"/>
+    <path d="M130 238 C128 288 126 326 124 362"/>
+    <path d="M170 238 C172 288 174 326 176 362"/>
+    <path d="M124 362 L110 362"/>
+    <path d="M176 362 L190 362"/>
+    <path d="M126 110 Q150 120 174 110" stroke-width="2" opacity=".6"/>
+  </g>
+  ${dotEls}
+  <path d="M${ld.x + 8} ${ld.y - 4} L238 106" stroke="#c33" stroke-width="2"/>
+  <text x="244" y="110" fill="#c33" font-size="18" font-weight="700">${body.label}</text>
+  <text x="150" y="394" fill="#2d5a3d" font-size="13" text-anchor="middle" opacity=".7">正面人形 · ${body.label}穴示意</text>
+</svg>`;
+}
+
+/* ============================================================
+ * 游戏状态
+ * ============================================================ */
+const $ = s => document.querySelector(s);
+const PHASE_ORDER = ['meet', 'try', 'teach', 'quiz'];
+
+const app = {
+  point: null,
+  phase: 'meet',
+  quizIdx: 0,
+  quizOrder: [],       // 当前题打乱后的选项顺序
+  quizOrderFor: -1,    // 该顺序对应的题号
+  busy: false,
+};
+
+/* ============================================================
+ * 赭鞭
+ * ============================================================ */
+function zbSay(text, mood){
+  $('#zbText').textContent = text;
+  const svg = $('#zbSvg');
+  svg.classList.remove('wag', 'fire');
+  if (mood){
+    void svg.getBoundingClientRect(); // 重新触发动画
+    svg.classList.add(mood === 'good' ? 'wag' : 'fire');
+    setTimeout(() => svg.classList.remove('wag', 'fire'), 1500);
+  }
+}
+const ZB_IDLE = {
+  meet: '这里是循经台·手太阴肺经卷。',
+  try:  '看着点，别丢人。',
+  teach:'好好记着。',
+  quiz: '该你了。',
+};
+
+/* ============================================================
+ * HUD
+ * ============================================================ */
+function renderSeals(){
+  const cur = PHASE_ORDER.indexOf(app.phase);
+  document.querySelectorAll('.seal-step').forEach(el => {
+    const idx = PHASE_ORDER.indexOf(el.dataset.p);
+    el.classList.toggle('active', idx === cur);
+    el.classList.toggle('done', idx < cur);
+  });
+}
+
+/* ============================================================
+ * 通用效果
+ * ============================================================ */
+function flashStage(){
+  const f = $('#stageFlash');
+  f.classList.remove('go');
+  void f.offsetWidth;
+  f.classList.add('go');
+}
+/* 可复用咳嗽特效：老伯冒出「咳咳」气泡 + 抖动 + 红光 */
+function coughBurst(){
+  const pb = $('#patientBox');
+  if (!pb) return;
+  pb.classList.remove('coughing');
+  void pb.offsetWidth;
+  pb.classList.add('coughing');
+  setTimeout(() => pb.classList.remove('coughing'), 1600);
+}
+/* 追打第二步：主角在前从左往右逃，赭鞭在身后边追边喷火，撞上后把主角顶飞出右上角（约 2.2 秒）
+   keepZb=true 时不覆盖赭鞭气泡（云门需要先亮出台词再追打） */
+function playChase(done, keepZb){
+  const layer = $('#chaseLayer');
+  const tryWrap = $('.try-wrap');
+  if (tryWrap) tryWrap.querySelectorAll('.actor').forEach(el => { el.style.opacity = '0'; });
+  $('#chaseHero').innerHTML = heroSVG();
+  if (!keepZb) zbSay('笨！穴位都搞错还敢动手！', 'bad');
+  layer.classList.remove('hidden', 'run', 'fire', 'out');
+  void layer.offsetWidth;
+  layer.classList.add('run');
+
+  setTimeout(() => layer.classList.add('fire'), 360);      /* 边追边喷火 */
+  setTimeout(() => flashStage(), 840);                      /* 撞飞瞬间：闪红 */
+  setTimeout(() => layer.classList.remove('fire'), 1000);   /* 撞飞后收火 */
+  setTimeout(() => layer.classList.add('out'), 1720);       /* 主角飞出画面，淡出 */
+  setTimeout(() => {
+    layer.classList.remove('run', 'fire', 'out');
+    layer.classList.add('hidden');
+    done();
+  }, 2200);
+}
+
+/* ============================================================
+ * 流程渲染
+ * ============================================================ */
+function showPhase(p){
+  app.phase = p;
+  app.busy = false;
+  renderSeals();
+  zbSay(ZB_IDLE[p]);
+  ({ meet: renderMeet, try: renderTry, teach: renderTeach, quiz: renderQuiz })[p]();
+}
+
+/* ---- 【遇】 ---- */
+function renderMeet(){
+  const p = app.point;
+  $('#sceneContent').innerHTML = `
+    <div class="fade-in meet-wrap">
+      <div class="card narr" id="narrText">${p.meet.text}<br><br>${p.meet.act}</div>
+      <div class="paifang">${paifangSVG(p.name)}</div>
+      <div class="actor hero-box">${heroSVG()}</div>
+      <div class="actor patient-box" id="patientBox">${patientSVG()}<div class="cough">咳…咳咳…</div></div>
+      <button class="hero-say" id="meetNext" type="button">${p.meet.nextBtn}</button>
+    </div>`;
+  $('#meetNext').addEventListener('click', () => {
+    if (app.busy) return;
+    app.busy = true;
+    showPhase('try');
+  });
+}
+
+/* ---- 【试】 ---- */
+function renderTry(){
+  const p = app.point;
+  const opts = p.tryStep.options.map((o, i) =>
+    `<button class="btn choice-btn" type="button" data-i="${i}"><span>${o.text}</span></button>`
+  ).join('');
+  $('#sceneContent').innerHTML = `
+    <div class="fade-in try-wrap">
+      <div class="card prompt">${p.tryStep.prompt}</div>
+      <div class="actor hero-box">${heroSVG()}</div>
+      <div class="actor patient-box" id="patientBox">${patientSVG()}<div class="cough">咳…咳咳…</div></div>
+      <div class="try-result-screen hidden" id="tryResultScreen"><p id="tryResultText"></p></div>
+      <div class="crow-wrap hidden" id="crowWrap"><span class="crow-text" id="crowText"></span>${crowSVG()}</div>
+      <div class="opts" id="tryOpts">${opts}</div>
+    </div>`;
+  $('#tryOpts').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b || app.busy || b.dataset.i === undefined) return;
+    app.busy = true;
+
+    const opt = p.tryStep.options[+b.dataset.i];
+    document.querySelectorAll('#tryOpts button').forEach(x => x.disabled = true);
+
+    if (opt.tier === 'right'){
+      /* 选对：绿色填充 + ✅ 正确 → 1 秒后推进 */
+      b.classList.add('right');
+      b.insertAdjacentHTML('beforeend', '<span class="opt-badge">✅ 正确</span>');
+      zbSay(opt.feedback, 'good');
+      setTimeout(() => showPhase('teach'), 1000);
+      return;
+    }
+
+    /* B 选项（crow）：黑字后果由乌鸦带着从左飞入→向右飞出，不触发追打 */
+    if (opt.tier === 'crow'){
+      b.classList.add('wrong');
+      b.insertAdjacentHTML('beforeend', '<span class="opt-badge err">❌ 错误</span>');
+      const optsBox = $('#tryOpts');
+      optsBox.style.display = 'none';
+      optsBox.style.pointerEvents = 'none';
+      const cf1 = $('.try-wrap .cough'); if (cf1) cf1.style.visibility = 'hidden';
+      zbSay(opt.feedback);
+      coughBurst();
+      const crow = $('#crowWrap');
+      $('#crowText').textContent = opt.consequence;
+      crow.classList.remove('hidden');
+      void crow.offsetWidth;
+      crow.classList.add('fly');
+      /* 乌鸦飞出屏幕后回到选项重选 */
+      setTimeout(() => {
+        app.busy = false;
+        renderTry();
+      }, 3100);
+      return;
+    }
+
+    /* 选错 · 第一步：选项立刻隐藏，人物上方显示后果文字（约 1.5 秒） */
+    b.classList.add('wrong');
+    b.insertAdjacentHTML('beforeend', '<span class="opt-badge err">❌ 错误</span>');
+    const optsBox = $('#tryOpts');
+    optsBox.style.display = 'none';
+    optsBox.style.pointerEvents = 'none';
+    const cf2 = $('.try-wrap .cough'); if (cf2) cf2.style.visibility = 'hidden';
+    const screen = $('#tryResultScreen');
+    const resultText = $('#tryResultText');
+    resultText.textContent = opt.consequence;
+    resultText.classList.add('quake');
+    screen.classList.remove('hidden');
+    zbSay(opt.feedback);
+    coughBurst();
+
+    setTimeout(() => {
+      /* 第二步：后果文字淡出 → 赭鞭喷火追打 → 第三步回到选项 */
+      screen.classList.add('fade');
+      setTimeout(() => playChase(() => {
+        app.busy = false;
+        renderTry();
+      }), 320);
+    }, 1500);
+  });
+}
+
+/* ---- 【教】 ---- */
+function renderTeach(){
+  const p = app.point;
+  const lines = p.teach.lines.map(([k, v]) => `<p><b>【${k}】</b>${v}</p>`).join('');
+  $('#sceneContent').innerHTML = `
+    <div class="fade-in teach-wrap">
+      <div class="teach-main">
+        <div class="card teach-doc">
+          ${doctorSVG()}
+          <div class="teach-text">
+            <h3>${p.teach.speaker}</h3>
+            ${lines}
+          </div>
+        </div>
+        <div class="card teach-body">${bodySVG(p.body)}</div>
+      </div>
+      <div class="teach-foot">
+        <button id="teachNext" class="btn" type="button">${p.teach.nextBtn}</button>
+      </div>
+    </div>`;
+  $('#teachNext').addEventListener('click', () => showPhase('quiz'));
+}
+
+/* ---- 【用】 ---- */
+function shuffled(arr){
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+function renderQuiz(){
+  const p = app.point;
+  if (app.quizIdx >= p.quiz.length){ win(); return; }
+  const item = p.quiz[app.quizIdx];
+  /* 每题打乱一次选项位置，答错重试时保持同一顺序 */
+  if (app.quizOrderFor !== app.quizIdx){
+    app.quizOrder = shuffled(item.options.map((_, i) => i));
+    app.quizOrderFor = app.quizIdx;
+  }
+  const letters = ['A', 'B', 'C', 'D'];
+  const opts = app.quizOrder.map((oi, pos) =>
+    `<button class="btn choice-btn" type="button" data-i="${oi}"><b>${letters[pos]}</b><span>${item.options[oi]}</span></button>`
+  ).join('');
+  $('#sceneContent').innerHTML = `
+    <div class="fade-in quiz-wrap">
+      <div class="quiz-patient">
+        <div class="patient-box" id="patientBox">${patientSVG()}<div class="cough">咳…咳咳…</div></div>
+      </div>
+      <div class="card quiz-card">
+        <div class="quiz-progress">第 ${app.quizIdx + 1} / ${p.quiz.length} 问</div>
+        <h3>${item.q}</h3>
+        <div class="quiz-opts" id="quizOpts">${opts}</div>
+      </div>
+    </div>`;
+  $('.quiz-card').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b || app.busy || b.dataset.i === undefined) return;
+    app.busy = true;
+
+    const right = +b.dataset.i === item.answer;
+    const pb = $('#patientBox');
+    document.querySelectorAll('#quizOpts button').forEach(x => x.disabled = true);
+
+    if (right){
+      /* 答对：变绿 + ✅ 正确 → 1 秒后自动下一题 */
+      b.classList.add('right');
+      b.insertAdjacentHTML('beforeend', '<span class="opt-badge">✅ 正确</span>');
+      zbSay('还行', 'good');
+      setTimeout(() => {
+        app.quizIdx++;
+        app.busy = false;
+        renderQuiz();
+      }, 1000);
+    } else {
+      /* 答错：变红 + ❌ 错误 → 1 秒后回到该题重答（不显示任何后果文字） */
+      b.classList.add('wrong');
+      b.insertAdjacentHTML('beforeend', '<span class="opt-badge err">❌ 错误</span>');
+      if (pb) pb.classList.add('sad');
+      flashStage();
+      zbSay('笨', 'bad');
+      setTimeout(() => {
+        app.busy = false;
+        renderQuiz();
+      }, 1000);
+    }
+  });
+}
+
+/* ============================================================
+ * 通关 / 重开
+ * ============================================================ */
+/* 通用通关面板：文案与下一关去向全部取自当前穴位的 win 配置，各穴共用 */
+function win(){
+  const w = app.point.win || {};
+  $('#winSeal').innerHTML = w.seal || '';
+  $('#winTitle').textContent = w.title || '';
+  $('#winText').textContent = w.text || '';
+  $('#winDim').textContent = w.dim || '';
+  $('#againBtn').textContent = w.againBtn || '重新练习';
+  $('#nextBtn').textContent = w.nextBtn || '前往下一关';
+  /* 面板弹出的同一瞬间，赭鞭气泡内容就位 */
+  zbSay(w.zb || '过关。', 'good');
+  $('#winOverlay').classList.remove('hidden');
+}
+/* ============================================================
+ * 选关页：遍历 POINTS 自动生成按钮，后续新增穴位自动出现
+ * ============================================================ */
+const CN_NUM = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
+function renderLevelSelect(){
+  $('#lsList').innerHTML = Object.keys(POINTS).map((id, i) => {
+    const p = POINTS[id];
+    return `<button class="ls-item" type="button" data-id="${id}">
+        <span class="ls-no">第${CN_NUM[i] || i + 1}穴</span>
+        <span class="ls-name">${p.name}</span>
+        <span class="ls-go">${i === 0 ? '开始' : '直达'}</span>
+      </button>`;
+  }).join('');
+  $('#lsList').addEventListener('click', e => {
+    const b = e.target.closest('.ls-item');
+    if (b) startLevel(b.dataset.id);
+  });
+}
+function showLevelSelect(){
+  $('#hud').classList.add('hidden');
+  $('#stage').classList.add('hidden');
+  $('#levelSelect').classList.remove('hidden');
+}
+
+function startLevel(id){
+  app.point = POINTS[id];
+  app.quizIdx = 0;
+  app.quizOrder = [];
+  app.quizOrderFor = -1;
+  app.busy = false;
+  app.phase = 'meet';
+  $('#chapterSeal').textContent = app.point.chapter;
+  $('#levelTitle').textContent = app.point.title;
+  $('#winOverlay').classList.add('hidden');
+  /* 离开选关页，回到游戏区 */
+  $('#levelSelect').classList.add('hidden');
+  $('#hud').classList.remove('hidden');
+  $('#stage').classList.remove('hidden');
+  /* 隐藏本穴所有 stage 容器 → 显示目标穴位容器 → 调用它的初始化入口 */
+  document.querySelectorAll('.level').forEach(el => el.classList.add('hidden'));
+  $('#level-' + id).classList.remove('hidden');
+  if (id === 'yunmen'){ YM.renderMeet(); }
+  else { showPhase('meet'); }
+}
+
+/* 重新练习：隐藏面板与本穴所有 stage，重置本穴状态，回到【遇】重头播放 */
+$('#againBtn').addEventListener('click', () => startLevel(app.point.id));
+/* 前往下一关：切换到下一穴并走它的初始化入口；下一穴尚未实现时只提示，不报错 */
+$('#nextBtn').addEventListener('click', () => {
+  const nextId = app.point.win && app.point.win.next;
+  if (nextId && POINTS[nextId]){
+    startLevel(nextId);
+  } else {
+    zbSay('下一关还在准备中。');
+  }
+});
+
+/* ============================================================
+ * 云门（第二穴）
+ * 动画全部复用中府已有函数与类：playChase（赭鞭追打）、
+ * .crow-wrap 乌鸦飞字、flashStage（闪红）、shake 节奏（青年震动）、
+ * paifangSVG / doctorSVG / bodySVG / choice-btn / opt-badge
+ * ============================================================ */
+/* 云门青年：单手扶柱、另一手捂肩 */
+function youthSVG(){
+  return `
+  <svg viewBox="0 0 90 150" class="youth-svg">
+    <circle cx="45" cy="8" r="6" fill="#26221c"/>
+    <circle cx="45" cy="26" r="16" fill="#f2c9a0" stroke="#33465c" stroke-width="2.5"/>
+    <path d="M29 22 Q45 6 61 22 L61 16 Q45 2 29 16 Z" fill="#26221c"/>
+    <circle cx="39" cy="25" r="2" fill="#222"/>
+    <circle cx="51" cy="25" r="2" fill="#222"/>
+    <path d="M39 33 Q45 35 51 32" stroke="#7a3520" stroke-width="2" fill="none"/>
+    <path d="M45 42 C28 48 25 90 23 140 L67 140 C65 90 62 48 45 42 Z" fill="#4d6b8a" stroke="#33465c" stroke-width="2"/>
+    <path d="M62 56 L86 74" stroke="#4d6b8a" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="88" cy="76" r="5" fill="#f2c9a0"/>
+    <path d="M30 56 L50 44" stroke="#4d6b8a" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="52" cy="43" r="5.5" fill="#f2c9a0"/>
+    <path d="M28 104 L62 104" stroke="#c33" stroke-width="5"/>
+  </svg>`;
+}
+/* 牌坊底部的三团云气（多圆弧云形，CSS 飘动 + 呼吸） */
+function ymClouds(){
+  return `
+  <svg class="ym-cloud-svg c1" viewBox="0 0 120 50"><path d="M24 46 C12 46 5 39 5 30 C5 22 12 16 20 17 C23 8 31 3 40 5 C45 1 53 2 57 7 C63 2 72 4 76 11 C86 9 95 16 95 25 C105 26 112 32 112 38 C112 43 106 46 99 46 Z"/></svg>
+  <svg class="ym-cloud-svg c2" viewBox="0 0 120 48"><path d="M26 44 C14 44 6 37 7 28 C8 20 15 15 23 16 C27 8 35 4 43 6 C48 2 56 3 60 8 C66 4 74 7 77 13 C86 12 94 18 93 26 C102 28 108 34 106 39 C104 43 98 44 92 44 Z"/></svg>
+  <svg class="ym-cloud-svg c3" viewBox="0 0 100 44"><path d="M22 40 C11 40 4 34 5 26 C6 18 13 13 20 14 C24 7 31 3 38 5 C43 1 50 2 54 7 C61 6 67 11 66 18 C74 19 79 25 78 31 C77 37 71 40 65 40 Z"/></svg>`;
+}
+const YM = {
+  sc(){ return $('#sceneContentY'); },
+  setPhase(p){ app.phase = p; app.busy = false; renderSeals(); },
+  /* ---- 【遇】牌坊淡入 → 青年自门洞上方跳下 → 气泡「嘶…」→ 问话按钮 ---- */
+  renderMeet(){
+    this.setPhase('meet');
+    zbSay('嗯？牌坊上云气在动。');
+    this.sc().innerHTML = `
+      <div class="fade-in ym-meet">
+        ${ymClouds()}
+        <div class="ym-gate">${paifangSVG('云门')}</div>
+        <div class="ym-youth jump" id="ymYouth">${youthSVG()}<div class="ym-bubble" id="ymBubble">嘶…</div></div>
+        <div class="opts ym-ask" id="ymAsk"><button class="btn" id="ymAskBtn" type="button">${app.point.meet.askBtn}</button></div>
+      </div>`;
+    /* 落地约 0.5 秒后冒气泡，再约 0.3 秒后显示问话按钮 */
+    setTimeout(() => { const y = $('#ymYouth'); if (y) y.classList.add('bubble-on'); }, 1850);
+    setTimeout(() => { const a = $('#ymAsk'); if (a) a.classList.add('show'); }, 2150);
+    $('#ymAskBtn').addEventListener('click', () => { if (!app.busy) this.renderTry(); });
+  },
+  /* ---- 【试】三选一：掰肩=追打 / 按锁骨窝=乌鸦 / 扶站直按云门=正确 ---- */
+  renderTry(){
+    const fresh = app.phase !== 'try';
+    this.setPhase('try');
+    if (fresh) zbSay('看着点，别丢人。');
+    const p = app.point, self = this;
+    const opts = p.tryStep.options.map((o, i) =>
+      `<button class="btn choice-btn" type="button" data-i="${i}"><span>${o.text}</span></button>`
+    ).join('');
+    this.sc().innerHTML = `
+      <div class="fade-in try-wrap">
+        <div class="card prompt">${p.tryStep.prompt}</div>
+        ${ymClouds()}
+        <div class="ym-gate">${paifangSVG('云门')}</div>
+        <div class="ym-youth bubble-on on" id="ymYouth">${youthSVG()}<div class="ym-bubble" id="ymBubble">嘶…</div></div>
+        <div class="crow-wrap hidden" id="crowWrapY"><span class="crow-text" id="crowTextY"></span>${crowSVG()}</div>
+        <div class="opts" id="ymOpts">${opts}</div>
+      </div>`;
+    $('#ymOpts').addEventListener('click', e => {
+      const b = e.target.closest('button');
+      if (!b || app.busy || b.dataset.i === undefined) return;
+      app.busy = true;
+      const opt = p.tryStep.options[+b.dataset.i];
+      document.querySelectorAll('#ymOpts button').forEach(x => x.disabled = true);
+
+      if (opt.tier === 'right'){
+        /* 选对：深绿填充 + ✅ → 约 0.6 秒后进入【教】 */
+        b.classList.add('right');
+        b.insertAdjacentHTML('beforeend', '<span class="opt-badge">✅ 正确</span>');
+        zbSay(opt.feedback, 'good');
+        setTimeout(() => self.renderTeach(), 600);
+        return;
+      }
+      if (opt.tier === 'crow'){
+        /* 乌鸦带字左进右出（复用中府 crow-wrap 飞字），字幕为 #333 黑字、无震颤 */
+        b.classList.add('wrong');
+        b.insertAdjacentHTML('beforeend', '<span class="opt-badge err">❌ 错误</span>');
+        const optsBox = $('#ymOpts');
+        optsBox.style.display = 'none';
+        optsBox.style.pointerEvents = 'none';
+        zbSay(opt.feedback);
+        const crow = $('#crowWrapY');
+        $('#crowTextY').textContent = opt.consequence;
+        crow.classList.remove('hidden');
+        void crow.offsetWidth;
+        crow.classList.add('fly');
+        setTimeout(() => { app.busy = false; self.renderTry(); }, 3100);
+        return;
+      }
+      /* 选错：选项变红 + ❌ → 赭鞭追打前亮台词 → 追打（复用 playChase）
+              → 青年震动 + 气泡变「嘶…疼！」→ 约 1 秒后选项重置可重选 */
+      b.classList.add('wrong');
+      b.insertAdjacentHTML('beforeend', '<span class="opt-badge err">❌ 错误</span>');
+      const optsBox2 = $('#ymOpts');
+      optsBox2.style.display = 'none';
+      optsBox2.style.pointerEvents = 'none';
+      zbSay(opt.feedback, 'bad');
+      const youth = $('#ymYouth'), bub = $('#ymBubble');
+      youth.classList.add('shake-y');
+      bub.textContent = opt.ouch;
+      playChase(() => {
+        setTimeout(() => { app.busy = false; self.renderTry(); }, 1000);
+      }, true);
+    });
+  },
+  /* ---- 【教】大夫讲解 + 人体轮廓只标云门一点 + 口播对比 ---- */
+  renderTeach(){
+    this.setPhase('teach');
+    zbSay('好好记着。');
+    const p = app.point;
+    const lines = p.teach.lines.map(([k, v]) => `<p><b>【${k}】</b>${v}</p>`).join('');
+    this.sc().innerHTML = `
+      <div class="fade-in teach-wrap">
+        <div class="teach-main">
+          <div class="card teach-doc">
+            ${doctorSVG()}
+            <div class="teach-text">
+              <h3>${p.teach.speaker}</h3>
+              ${lines}
+              <p class="teach-note">${p.teach.note}</p>
+            </div>
+          </div>
+          <div class="card teach-body">${bodySVG(p.body)}</div>
+        </div>
+        <div class="teach-foot">
+          <button id="teachNextY" class="btn" type="button">${p.teach.nextBtn}</button>
+        </div>
+      </div>`;
+    $('#teachNextY').addEventListener('click', () => this.renderQuiz());
+  },
+  /* ---- 【用】3 道题：答对下一题；答错变红 + ❌，1 秒后自动重置，无额外文字提示 ---- */
+  renderQuiz(){
+    const p = app.point, self = this;
+    if (app.quizIdx >= p.quiz.length){ win(); return; }
+    const fresh = app.phase !== 'quiz';
+    this.setPhase('quiz');
+    if (fresh) zbSay('该你了。');
+    const item = p.quiz[app.quizIdx];
+    const letters = ['A', 'B', 'C', 'D'];
+    const opts = item.options.map((t, i) =>
+      `<button class="btn choice-btn" type="button" data-i="${i}"><b>${letters[i]}</b><span>${t}</span></button>`
+    ).join('');
+    this.sc().innerHTML = `
+      <div class="fade-in quiz-wrap">
+        <div class="quiz-patient">
+          <div class="ym-youth ym-static bubble-on" id="ymYouth">${youthSVG()}<div class="ym-bubble">嘶…</div></div>
+        </div>
+        <div class="card quiz-card">
+          <div class="quiz-progress">第 ${app.quizIdx + 1} / ${p.quiz.length} 问</div>
+          <h3>${item.q}</h3>
+          <div class="quiz-opts" id="quizOptsY">${opts}</div>
+        </div>
+      </div>`;
+    $('#quizOptsY').addEventListener('click', e => {
+      const b = e.target.closest('button');
+      if (!b || app.busy || b.dataset.i === undefined) return;
+      app.busy = true;
+      document.querySelectorAll('#quizOptsY button').forEach(x => x.disabled = true);
+      if (+b.dataset.i === item.answer){
+        b.classList.add('right');
+        b.insertAdjacentHTML('beforeend', '<span class="opt-badge">✅ 正确</span>');
+        zbSay('还行', 'good');
+        setTimeout(() => { app.quizIdx++; app.busy = false; self.renderQuiz(); }, 1000);
+      } else {
+        /* 答错：变红 + ❌ + 闪红，1 秒后自动重置可重答，无任何额外文字提示 */
+        b.classList.add('wrong');
+        b.insertAdjacentHTML('beforeend', '<span class="opt-badge err">❌ 错误</span>');
+        flashStage();
+        setTimeout(() => { app.busy = false; self.renderQuiz(); }, 1000);
+      }
+    });
+  },
+};
+
+/* 启动：先进选关页 */
+renderLevelSelect();
+showLevelSelect();
+</script>
+</body>
+</html>
